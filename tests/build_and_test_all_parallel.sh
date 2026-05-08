@@ -9,6 +9,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 VENV_DIR="$REPO_DIR/.venv"
+export RYZERS_PACKAGES_PATH="$REPO_DIR"
 LOG_DIR="$SCRIPT_DIR/build_logs"
 RESULTS_DIR="$LOG_DIR/results"
 RESULTS_FILE="$LOG_DIR/results_summary.txt"
