@@ -19,7 +19,8 @@ install_base() {
         pciutils dkms python3-dev \
         libboost-all-dev libssl-dev libprotobuf-dev rapidjson-dev \
         libdrm-dev libelf-dev uuid-dev libcurl4-openssl-dev \
-        ocl-icd-opencl-dev libncurses-dev libffi-dev
+        ocl-icd-opencl-dev ocl-icd-dev libncurses-dev libffi-dev \
+        systemtap-sdt-dev
 }
 
 clone_source() {
