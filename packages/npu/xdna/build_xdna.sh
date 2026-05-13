@@ -36,26 +36,36 @@ discover_cmake_deps() {
         | sort -u
 }
 
-# Map cmake package name → apt package
+# Standard cmake→apt mapping (works across Ubuntu versions, not project-specific)
+declare -A CMAKE_TO_APT=(
+    [Boost]=libboost-all-dev  [OpenSSL]=libssl-dev  [Protobuf]=libprotobuf-dev
+    [RapidJSON]=rapidjson-dev [CURL]=libcurl4-openssl-dev [Curses]=libncurses-dev
+    [PkgConfig]=pkg-config    [Python3]=python3-dev  [PythonInterp]=python3
+    [PythonLibs]=python3-dev  [GTest]=libgtest-dev   [Doxygen]=doxygen
+    [OpenCL]=ocl-icd-opencl-dev [Threads]=""  [Git]=""  [UnixCommands]=""
+    [uuid]=uuid-dev  [LibElf]=libelf-dev  [libffi]=libffi-dev
+    [pybind11]=pybind11-dev   [cxxopts]=libcxxopts-dev [absl]=libabsl-dev
+    [libdrm]=libdrm-dev       [libudev]=libudev-dev  [systemd]=libsystemd-dev
+    [yaml-cpp]=libyaml-dev
+)
+
 resolve_apt_pkg() {
     local cmake_name="$1"
     local lower=$(echo "$cmake_name" | tr '[:upper:]' '[:lower:]')
 
-    # Try common -dev package naming first (most reliable)
-    for try in "lib${lower}-dev" "${lower}-dev" "lib${lower}"; do
+    # 1. Check well-known mapping (instant)
+    if [[ -v CMAKE_TO_APT[$cmake_name] ]]; then
+        local mapped="${CMAKE_TO_APT[$cmake_name]}"
+        [ -n "$mapped" ] && echo "$mapped"
+        return $([ -n "$mapped" ] && echo 0 || echo 1)
+    fi
+
+    # 2. Try common naming patterns (fast, no network)
+    for try in "lib${lower}-dev" "${lower}-dev"; do
         apt-cache show "$try" &>/dev/null && echo "$try" && return
     done
 
-    # Try cmake config file search (skip FindXxx - that's always cmake-data)
-    local config_pkg
-    config_pkg=$(apt-file search "${lower}-config.cmake" 2>/dev/null \
-        | grep -v cmake-data | head -1 | cut -d: -f1)
-    [ -n "$config_pkg" ] && echo "$config_pkg" && return
-    config_pkg=$(apt-file search "${cmake_name}Config.cmake" 2>/dev/null \
-        | grep -v cmake-data | head -1 | cut -d: -f1)
-    [ -n "$config_pkg" ] && echo "$config_pkg" && return
-
-    # Try apt-cache search as last resort
+    # 3. apt-cache search fallback
     local search_pkg
     search_pkg=$(apt-cache search "^lib${lower}" 2>/dev/null \
         | grep -i dev | head -1 | awk '{print $1}')
