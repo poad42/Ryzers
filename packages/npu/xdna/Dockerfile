@@ -6,64 +6,18 @@ ARG DRIVER_VERSION="854ff04"
 RUN groupadd -f render && usermod -aG render root
 
 WORKDIR /ryzers
-
 ENV DEBIAN_FRONTEND=noninteractive
 
-# XRT build deps (these were available in conda before we nuked it)
-RUN apt-get update && apt-get install -y \
-	git \
-	curl \
-	bash \
-	wget \
-	cmake \
-	build-essential \
-	libboost-all-dev \
-	pkg-config \
-	libssl-dev \
-	libprotobuf-dev \
-	protobuf-compiler \
-	uuid-dev \
-	libdrm-dev \
-	ocl-icd-opencl-dev \
-	opencl-headers \
-	python3-dev \
-	libyaml-dev \
-	libelf-dev \
-	libudev-dev \
-	libsystemd-dev \
-	pciutils \
-	rapidjson-dev \
-	libcurl4-openssl-dev \
-	dkms
+# Copy build scripts
+COPY build_xdna.sh /ryzers/build_xdna.sh
+COPY extract_npu_firmware.sh /ryzers/extract_npu_firmware.sh
+RUN chmod +x /ryzers/build_xdna.sh /ryzers/extract_npu_firmware.sh
 
-RUN git clone https://github.com/amd/xdna-driver && \
-    cd xdna-driver && \
-    git checkout $DRIVER_VERSION && \
-    git submodule update --init --recursive
-
-RUN cd /ryzers/xdna-driver/tools && \
-    apt-get update && \
-    ./amdxdna_deps.sh -docker
-
-# Build XRT
-RUN cd /ryzers/xdna-driver/xrt/build/ && \
-    ./build.sh -npu -opt -noctest
-
-# Build XDNA driver
-RUN cd /ryzers/xdna-driver/build && \
-    ./build.sh -release && \
-    ./build.sh -package
-
-# Install XRT/XDNA debs (also needed on host via install_xdna.sh)
-RUN mkdir /ryzers/debs && \
-    cp /ryzers/xdna-driver/build/Release/xrt_plugin*amd64-amdxdna.deb /ryzers/debs/ && \
-    cp /ryzers/xdna-driver/xrt/build/Release/xrt*-amd64-base.deb /ryzers/debs/ && \
-	dpkg -i /ryzers/debs/*.deb
+# Build XRT + XDNA with dynamic dep resolution
+RUN /ryzers/build_xdna.sh $DRIVER_VERSION
 
 # Extract NPU firmware from Ubuntu's linux-firmware deb
-COPY extract_npu_firmware.sh /ryzers/extract_npu_firmware.sh
-RUN chmod +x /ryzers/extract_npu_firmware.sh && \
-    /ryzers/extract_npu_firmware.sh
+RUN /ryzers/extract_npu_firmware.sh
 
 ENV SHELL=/bin/bash
 
