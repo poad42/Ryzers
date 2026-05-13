@@ -16,8 +16,10 @@ install_base() {
     apt-get update -qq
     apt-get install -y --no-install-recommends \
         git curl wget cmake build-essential pkg-config \
-        pciutils dkms apt-file python3-dev
-    apt-file update 2>/dev/null || true
+        pciutils dkms python3-dev \
+        libboost-all-dev libssl-dev libprotobuf-dev rapidjson-dev \
+        libdrm-dev libelf-dev uuid-dev libcurl4-openssl-dev \
+        ocl-icd-opencl-dev libncurses-dev libffi-dev
 }
 
 clone_source() {
@@ -38,7 +40,8 @@ discover_cmake_deps() {
 
 # Standard cmake→apt mapping (works across Ubuntu versions, not project-specific)
 declare -A CMAKE_TO_APT=(
-    [Boost]=libboost-all-dev  [OpenSSL]=libssl-dev  [Protobuf]=libprotobuf-dev
+    [Boost]=libboost-all-dev  [boost_filesystem]=libboost-all-dev
+    [OpenSSL]=libssl-dev  [Protobuf]=libprotobuf-dev
     [RapidJSON]=rapidjson-dev [CURL]=libcurl4-openssl-dev [Curses]=libncurses-dev
     [PkgConfig]=pkg-config    [Python3]=python3-dev  [PythonInterp]=python3
     [PythonLibs]=python3-dev  [GTest]=libgtest-dev   [Doxygen]=doxygen
