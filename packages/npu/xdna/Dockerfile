@@ -31,7 +31,10 @@ RUN apt-get update && apt-get install -y \
 	libelf-dev \
 	libudev-dev \
 	libsystemd-dev \
-	pciutils
+	pciutils \
+	rapidjson-dev \
+	libcurl4-openssl-dev \
+	dkms
 
 RUN git clone https://github.com/amd/xdna-driver && \
     cd xdna-driver && \
