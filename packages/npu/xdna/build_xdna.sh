@@ -36,28 +36,31 @@ discover_cmake_deps() {
         | sort -u
 }
 
-# Map cmake package name → apt package using apt-file + cmake module search
+# Map cmake package name → apt package
 resolve_apt_pkg() {
     local cmake_name="$1"
     local lower=$(echo "$cmake_name" | tr '[:upper:]' '[:lower:]')
 
-    # Try cmake module file search via apt-file
-    local module_pkg
-    module_pkg=$(apt-file search "Find${cmake_name}.cmake" 2>/dev/null | head -1 | cut -d: -f1)
-    [ -n "$module_pkg" ] && echo "$module_pkg" && return
-
-    # Try config file search
-    module_pkg=$(apt-file search "${lower}-config.cmake" 2>/dev/null | head -1 | cut -d: -f1)
-    [ -n "$module_pkg" ] && echo "$module_pkg" && return
-    module_pkg=$(apt-file search "${cmake_name}Config.cmake" 2>/dev/null | head -1 | cut -d: -f1)
-    [ -n "$module_pkg" ] && echo "$module_pkg" && return
-
-    # Try common -dev package naming
+    # Try common -dev package naming first (most reliable)
     for try in "lib${lower}-dev" "${lower}-dev" "lib${lower}"; do
         apt-cache show "$try" &>/dev/null && echo "$try" && return
     done
 
-    # Not found
+    # Try cmake config file search (skip FindXxx - that's always cmake-data)
+    local config_pkg
+    config_pkg=$(apt-file search "${lower}-config.cmake" 2>/dev/null \
+        | grep -v cmake-data | head -1 | cut -d: -f1)
+    [ -n "$config_pkg" ] && echo "$config_pkg" && return
+    config_pkg=$(apt-file search "${cmake_name}Config.cmake" 2>/dev/null \
+        | grep -v cmake-data | head -1 | cut -d: -f1)
+    [ -n "$config_pkg" ] && echo "$config_pkg" && return
+
+    # Try apt-cache search as last resort
+    local search_pkg
+    search_pkg=$(apt-cache search "^lib${lower}" 2>/dev/null \
+        | grep -i dev | head -1 | awk '{print $1}')
+    [ -n "$search_pkg" ] && echo "$search_pkg" && return
+
     return 1
 }
 
