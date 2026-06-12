@@ -1,0 +1,62 @@
+# Copyright(C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+# SPDX-License-Identifier: MIT
+#
+# Ryzers package config for CaP-X (Robosuite / LIBERO-PRO eval path).
+#
+# Build:
+#   ryzers build capx                              # robosuite (default)
+#   ryzers build --name capx-libero capx           # see README to set CAPX_SIM=libero
+# Run:
+#   ryzers run                                     # runs the sign-of-life test
+#   ryzers run bash                                # interactive shell to launch evals
+#
+# GPU device flags (/dev/kfd, /dev/dri, video+render groups) and X11 are added
+# automatically by Ryzers — do not add them here.
+
+### ryzers build options
+
+build_arguments:
+- "CAPX_SIM=robosuite"     # robosuite | libero  (mutually exclusive families)
+# Pin a specific CaP-X commit for reproducibility (defaults to an audited commit
+# in the Dockerfile). Uncomment to override:
+# - "CAPX_REF=53e9966d7a8e2fa7494676772bccc35280f5c0ed"
+
+### ryzers run options
+
+environment_variables:
+# --- LLM provider (REQUIRED): an OpenAI-compatible endpoint ---------------
+# CaP-X queries an LLM over an OpenAI-compatible /chat/completions API. The
+# simplest path is OpenRouter, exactly like upstream. Get a key at
+# https://openrouter.ai/keys, then UNCOMMENT the line below and paste your key
+# (no angle brackets — the value is passed straight to the shell):
+# - "OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxx"
+# For a LOCAL / on-prem OpenAI-compatible server instead (vLLM-ROCm, llama.cpp
+# llama-server, etc.), you don't need a key — see the README "Local / on-prem
+# LLM" section and point --server-url at your endpoint at run time.
+
+# --- SAM3 perception weights (OPTIONAL): gated on HuggingFace -------------
+# SAM3 (facebook/sam3) requires HF access approval + a token. Request access at
+# https://huggingface.co/facebook/sam3, create a token at
+# https://huggingface.co/settings/tokens, then UNCOMMENT and set:
+# - "HF_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxxxx"
+# If you leave this unset, use the ungated SAM2/OWLv2 perception path described
+# in the README (no token needed).
+
+# --- Rendering -----------------------------------------------------------
+- "MUJOCO_GL=egl"
+# Uncomment to force a GFX arch if you hit "invalid device function":
+#   Strix Halo (gfx1151):           "HSA_OVERRIDE_GFX_VERSION=11.5.1"
+#   Phoenix/Strix laptop (gfx1103): "HSA_OVERRIDE_GFX_VERSION=11.0.0"
+# - "HSA_OVERRIDE_GFX_VERSION=11.5.1"
+
+# Persist the HuggingFace weight cache (SAM3/GraspNet) across runs, and expose
+# eval outputs (videos, per-trial rewards) on the host.
+volume_mappings:
+- "~/.cache/huggingface:/root/.cache/huggingface"
+- "$PWD/packages/robotics/capx/outputs:/ryzers/cap-x/outputs"
+
+# CaP-X serves perception + web UI on localhost ports. Ryzers runs with host
+# networking, so these are reachable directly. If you need to expose the
+# interactive web UI to another host, map it:
+# port_mappings:
+# - "8200:8200"   # CaP-X web UI
